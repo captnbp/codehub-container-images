@@ -1,7 +1,5 @@
 FROM    ubuntu:22.04
 
-LABEL maintainer="benoit.pourre@doca-consulting.fr"
-LABEL source="https://gitlab.com/captnbp/code-server-hub"
 LABEL github-project="https://github.com/NYU-CI/jupyterhub-nginx-oauth"
 
 # Install dependencies

@@ -35,7 +35,7 @@ RUN ARCH="$(dpkg --print-architecture)" && \
     mkdir -p /etc/fixuid && \
     printf "user: coder\ngroup: coder\n" > /etc/fixuid/config.yml
 
-RUN curl -L "https://github.com/cdr/code-server/releases/download/v4.15.0/code-server_4.15.0_$(dpkg --print-architecture).deb" -o /tmp/code-server.deb && \
+RUN curl -L "https://github.com/cdr/code-server/releases/download/v4.16.0/code-server_4.16.0_$(dpkg --print-architecture).deb" -o /tmp/code-server.deb && \
     dpkg -i /tmp/code-server.deb && rm /tmp/code-server.deb
 
 EXPOSE 8080
@@ -45,9 +45,6 @@ EXPOSE 8080
 USER    1000
 ENV     USER=coder
 WORKDIR /home/coder
-
-LABEL maintainer="benoit.pourre@doca-consulting.fr"
-LABEL source="https://gitlab.com/captnbp/code-server-hub"
 
 COPY    ./install_tools.sh /usr/local/bin/install_tools.sh
 COPY    ./docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
