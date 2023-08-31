@@ -4,6 +4,12 @@ stages:
   - scan
   - sign
 
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 include:
   - project: doca/gitlab-ci-lib
     file: container/build.yaml
