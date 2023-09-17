@@ -1,24 +1,10 @@
 FROM debian:12
 
-# hadolint ignore=DL3008
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    dumb-init \
-    zsh \
-    htop \
-    locales \
-    man \
-    nano \
-    git \
-    procps \
-    openssh-client \
-    sudo \
-    vim.tiny \
-    lsb-release \
-    iproute2 \
-  && rm -rf /var/lib/apt/lists/*
+COPY    ./install_tools.sh /usr/local/bin/install_tools.sh
+COPY    ./docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+USER    root
+RUN     /usr/local/bin/install_tools.sh
 
 # https://wiki.debian.org/Locale#Manually
 RUN sed -i "s/# en_US.UTF-8/en_US.UTF-8/" /etc/locale.gen \
@@ -45,12 +31,6 @@ EXPOSE 8080
 USER    1000
 ENV     USER=coder
 WORKDIR /home/coder
-
-COPY    ./install_tools.sh /usr/local/bin/install_tools.sh
-COPY    ./docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-
-USER    root
-RUN     /usr/local/bin/install_tools.sh
 
 USER    coder
 ENV     ZSH_CACHE_DIR=/tmp

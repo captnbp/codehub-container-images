@@ -75,6 +75,7 @@ sign-code-server:
     IMAGE_NAME: "code-server"
   needs:
     - docker-build-code-server
+    - merge-manifest-code-server
 
 sign-nginx:
   extends: .tpl:container:sign:sign-image
@@ -82,6 +83,7 @@ sign-nginx:
     IMAGE_NAME: "nginx"
   needs:
     - docker-build-nginx
+    - merge-manifest-nginx
 
 sign-oauth:
   extends: .tpl:container:sign:sign-image
@@ -89,6 +91,7 @@ sign-oauth:
     IMAGE_NAME: "oauth"
   needs:
     - docker-build-oauth
+    - merge-manifest-oauth
 
 attest-code-server:
   extends: .tpl:container:sign:attest-image
@@ -131,3 +134,21 @@ mr-note-oauth:
     IMAGE_NAME: "oauth"
   needs:
     - docker-build-oauth
+
+merge-manifest-code-server:
+  extends: .tpl:container:build:merge_manifests
+  needs:
+    - job: docker-build-code-server
+      artifacts: false
+
+merge-manifest-nginx:
+  extends: .tpl:container:build:merge_manifests
+  needs:
+    - job: docker-build-nginx
+      artifacts: false
+
+merge-manifest-oauth:
+  extends: .tpl:container:build:merge_manifests
+  needs:
+    - job: docker-build-oauth
+      artifacts: false

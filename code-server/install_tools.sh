@@ -1,109 +1,179 @@
 #!/bin/bash
 set -euo pipefail
 cd /tmp
+# shellcheck disable=SC2034
 DEBIAN_FRONTEND=noninteractive
-CURL_OPTS=""
 
 echo "Install tools"
 apt-get update >/dev/null
-apt-get install --no-install-recommends -y wget apt-transport-https gnupg lsb-release
-wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb buster main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | tee /usr/share/keyrings/trivy.gpg > /dev/null
+echo "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb buster main" | tee -a /etc/apt/sources.list.d/trivy.list
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg
 chmod a+r /usr/share/keyrings/docker.gpg
+# shellcheck source=/dev/null
 echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+  $(source /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
 apt-get update >/dev/null
+apt-get install -y --no-install-recommends dumb-init sudo procps lsb-release vim pwgen jq wget curl unzip software-properties-common gpg gettext ca-certificates openssh-client git bzip2 skopeo pass zsh fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin golang shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2
 apt-get dist-upgrade -y
-apt-get install --no-install-recommends -y vim pwgen jq unzip pass zsh fonts-powerline \
-    htop software-properties-common gpg netcat-openbsd uuid-runtime dnsutils exa fd-find skopeo bzip2 \
-    trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin golang
+
+# For AMD64 / x86_64
+[ "$(uname -m)" = x86_64 ] && ARCH="amd64"
+# For ARM64
+[ "$(uname -m)" = aarch64 ] && ARCH="arm64"
+OS=$(uname |tr '[:upper:]' '[:lower:]')
 
 echo "Install Ansible and ansible-modules-hashivault"
 # https://www.linuxuprising.com/2023/03/next-debianubuntu-releases-will-likely.html?m=1
 export PIP_BREAK_SYSTEM_PACKAGES=1
-apt-get install -y --no-install-recommends python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2
 pip3 install --no-cache-dir ansible ansible-modules-hashivault openshift passlib hvac elasticsearch virtualenv ipykernel checkov opensearch-py
 
-
-ln -s $(which fdfind) /usr/local/bin/fd
+ln -s "$(which fdfind)" /usr/local/bin/fd
 
 echo "Install Oh My Zsh"
 sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 mv /root/.oh-my-zsh /usr/share/oh-my-zsh
 
 echo "Install kubectl"
-curl ${CURL_OPTS} -L https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
-    -o /usr/local/bin/kubectl >/dev/null
-chmod +x /usr/local/bin/kubectl
+curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/${OS}/${ARCH}/kubectl" >/dev/null
+chmod +x /tmp/kubectl
+mv -f /tmp/kubectl /usr/local/bin/kubectl
 
 echo "Install helm"
-latest_release_url="https://github.com/helm/helm/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/helm/helm/releases/tag/v3.' | grep -v beta | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}')
-curl ${CURL_OPTS} -L "https://get.helm.sh/helm-$TAG-linux-amd64.tar.gz" \
-    -o /tmp/helm.tar.gz >/dev/null
-tar zxf /tmp/helm.tar.gz -C /tmp/ >/dev/null
-mv -f /tmp/linux-amd64/helm /usr/local/bin/helm
-chown 0755 /usr/local/bin/helm
-rm /tmp/helm.tar.gz
-rm -Rf /tmp/linux-amd64/
+HELM_VERSION=$(curl -Ls https://api.github.com/repos/helm/helm/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+HELM_DIST="helm-$HELM_VERSION-$OS-$ARCH.tar.gz"
+DOWNLOAD_URL="https://get.helm.sh/$HELM_DIST"
+CHECKSUM_URL="$DOWNLOAD_URL.sha256"
+HELM_TMP_ROOT="$(mktemp -dt helm-installer-XXXXXX)"
+HELM_TMP_FILE="$HELM_TMP_ROOT/$HELM_DIST"
+HELM_SUM_FILE="$HELM_TMP_ROOT/$HELM_DIST.sha256"
+echo "Downloading $DOWNLOAD_URL"
+if type "curl" > /dev/null; then
+  curl -SsL "$CHECKSUM_URL" -o "$HELM_SUM_FILE"
+elif type "wget" > /dev/null; then
+  wget -q -O "$HELM_SUM_FILE" "$CHECKSUM_URL"
+fi
+if type "curl" > /dev/null; then
+  curl -SsL "$DOWNLOAD_URL" -o "$HELM_TMP_FILE"
+elif type "wget" > /dev/null; then
+  wget -q -O "$HELM_TMP_FILE" "$DOWNLOAD_URL"
+fi
+# installFile verifies the SHA256 for the file, then unpacks and
+# installs it.
+HELM_TMP="$HELM_TMP_ROOT/helm"
+sum=$(openssl sha1 -sha256 "${HELM_TMP_FILE}" | awk '{print $2}')
+expected_sum=$(cat "${HELM_SUM_FILE}")
+if [ "$sum" != "$expected_sum" ]; then
+  echo "SHA sum of ${HELM_TMP_FILE} does not match. Aborting."
+  exit 1
+fi
+mkdir -p "$HELM_TMP"
+tar xf "$HELM_TMP_FILE" -C "$HELM_TMP"
+HELM_TMP_BIN="$HELM_TMP/$OS-$ARCH/helm"
+cp "$HELM_TMP_BIN" "/usr/local/bin"
+
+echo "Install Packer"
+PACKER_VERSION=$(curl -sL "https://api.github.com/repos/hashicorp/packer/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+wget "https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_${OS}_${ARCH}.zip" -O /tmp/packer.zip >/dev/null
+unzip /tmp/packer.zip >/dev/null
+mv -f /tmp/packer /usr/local/bin/packer
+rm /tmp/packer.zip
+
+echo "Install Terraform"
+TERRAFORM_VERSION=$(curl -sL "https://api.github.com/repos/hashicorp/terraform/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+wget "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${OS}_${ARCH}.zip" -O /tmp/terraform.zip >/dev/null
+unzip terraform.zip >/dev/null
+mv -f /tmp/terraform /usr/local/bin/terraform
+chown 0755 /usr/local/bin/terraform
+rm /tmp/terraform.zip
+
+echo "Install Vault"
+VAULT_VERSION=$(curl -sL "https://api.github.com/repos/hashicorp/vault/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+wget "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_${OS}_${ARCH}.zip" -O /tmp/vault.zip >/dev/null
+unzip /tmp/vault.zip >/dev/null
+mv -f /tmp/vault /usr/local/bin/vault
+chown 0755 /usr/local/bin/vault
+rm /tmp/vault.zip
+
+echo "Install Minio mc client"
+wget "https://dl.min.io/client/mc/release/${OS}-${ARCH}/mc" -O /usr/local/bin/mc >/dev/null
+chmod 0755 /usr/local/bin/mc
+
+echo "Install Restic cli"
+RESTIC_VERSION=$(curl -sL "https://api.github.com/repos/restic/restic/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+wget "https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_${OS}_${ARCH}.bz2" -O /tmp/restic.bz2 >/dev/null
+bzip2 -d /tmp/restic.bz2
+mv /tmp/restic /usr/local/bin/restic
+chmod 0755 /usr/local/bin/restic
+
+echo "Install Scaleway scw cli"
+SCW_VERSION=$(curl -sL "https://api.github.com/repos/scaleway/scaleway-cli/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+wget "https://github.com/scaleway/scaleway-cli/releases/download/v${SCW_VERSION}/scaleway-cli_${SCW_VERSION}_${OS}_${ARCH}" -O /usr/local/bin/scw >/dev/null
+chmod 0755 /usr/local/bin/scw
+
+echo "Install Hadolint"
+HADOLINT_VERSION=$(curl -sL "https://api.github.com/repos/hadolint/hadolint/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+[ "$(uname -m)" = x86_64 ] && wget "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64" -O /usr/local/bin/hadolint >/dev/null
+[ "$(uname -m)" = aarch64 ] && wget "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-arm64" -O /usr/local/bin/hadolint >/dev/null
+chmod 0755 /usr/local/bin/hadolint
+
+echo "Install cosign"
+curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-${OS}-${ARCH}"
+mv "cosign-${OS}-${ARCH}" /usr/local/bin/cosign
+chmod +x /usr/local/bin/cosign
+
+echo "Install dive"
+DIVE_VERSION=$(curl -sL "https://api.github.com/repos/wagoodman/dive/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+curl -OL "https://github.com/wagoodman/dive/releases/download/v${DIVE_VERSION}/dive_${DIVE_VERSION}_${OS}_${ARCH}.deb"
+apt install "./dive_${DIVE_VERSION}_${OS}_${ARCH}.deb"
+rm "./dive_${DIVE_VERSION}_${OS}_${ARCH}.deb"
+
+echo "Install oras"
+ORAS_VERSION=$(curl -sL https://api.github.com/repos/oras-project/oras/releases/latest | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+curl -LO "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_${OS}_${ARCH}.tar.gz"
+mkdir -p oras-install/
+tar -zxf "oras_${ORAS_VERSION}_${OS}_${ARCH}.tar.gz" -C oras-install/
+mv oras-install/oras /usr/local/bin/
+rm -rf "oras_${ORAS_VERSION}_${OS}_${ARCH}.tar.gz" oras-install/
+
+echo "Install kind"
+KIND_VERSION=$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+curl -Lo /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-${OS}-${ARCH}"
+chmod 0755 /usr/local/bin/kind
+
+echo "Install manifest-tool"
+MANIFEST_VERSION=$(curl -sL https://api.github.com/repos/estesp/manifest-tool/releases/latest | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+curl -Lo /tmp/binaries-manifest-tool.tar.gz "https://github.com/estesp/manifest-tool/releases/download/v${MANIFEST_VERSION}/binaries-manifest-tool-${MANIFEST_VERSION}.tar.gz"
+tar -zxf /tmp/binaries-manifest-tool.tar.gz "manifest-tool-${OS}-${ARCH}"
+mv "manifest-tool-${OS}-${ARCH}" "/usr/local/bin/manifest-tool"
+chmod 0755 /usr/local/bin/manifest-tool
+rm -rf /tmp/binaries-manifest-tool.tar.gz
+
+echo "install testssl.sh"
+git clone --depth 1 https://github.com/drwetter/testssl.sh.git /usr/local/testssl.sh
+chmod 0755 /usr/local/testssl.sh
 
 echo "Install krew"
-OS="$(uname | tr '[:upper:]' '[:lower:]')"
-ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')"
 KREW="krew-${OS}_${ARCH}"
 curl -L "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" -o /tmp/krew.tar.gz >/dev/null
 tar zxvf "krew.tar.gz" -C /tmp/ >/dev/null
-mv -f /tmp/krew-linux_amd64 /usr/local/bin/krew
+mv -f "/tmp/krew-linux_${ARCH}" /usr/local/bin/krew
 chown 0755 /usr/local/bin/krew
 rm /tmp/krew.tar.gz /tmp/LICENSE
 
 echo "Install Gadget"
-TAG=$(curl https://api.github.com/repos/inspektor-gadget/inspektor-gadget/releases/latest | jq -r .tag_name)
-curl -L "https://github.com/inspektor-gadget/inspektor-gadget/releases/download/${TAG}/kubectl-gadget-linux-amd64-${TAG}.tar.gz" -o /tmp/kubectl-gadget.tar.gz >/dev/null
+GADGET_VERSION=$(curl -sL https://api.github.com/repos/inspektor-gadget/inspektor-gadget/releases/latest | jq -r .tag_name)
+curl -L "https://github.com/inspektor-gadget/inspektor-gadget/releases/download/${GADGET_VERSION}/kubectl-gadget-${OS}-${ARCH}-${GADGET_VERSION}.tar.gz" -o /tmp/kubectl-gadget.tar.gz >/dev/null
 tar zxf /tmp/kubectl-gadget.tar.gz -C /tmp/ >/dev/null
 mv -f /tmp/kubectl-gadget /usr/local/bin/kubectl-gadget
 chown 0755 /usr/local/bin/kubectl-gadget
 rm /tmp/kubectl-gadget.tar.gz /tmp/LICENSE
 
-echo "Install Packer"
-latest_release_url="https://github.com/hashicorp/packer/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/hashicorp/packer/releases/tag/v.' | grep -v beta | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-curl ${CURL_OPTS} -L "https://releases.hashicorp.com/packer/${TAG}/packer_${TAG}_linux_amd64.zip" \
-    -o /tmp/packer.zip >/dev/null
-unzip /tmp/packer.zip -d /tmp/ >/dev/null
-mv -f /tmp/packer /usr/local/bin/packer
-rm /tmp/packer.zip
-packer -autocomplete-install
-
-echo "Install Terraform"
-latest_release_url="https://github.com/hashicorp/terraform/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/hashicorp/terraform/releases/tag/v.' | grep -v beta | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-curl ${CURL_OPTS} -L "https://releases.hashicorp.com/terraform/${TAG}/terraform_${TAG}_linux_amd64.zip" \
-    -o /tmp/terraform.zip >/dev/null
-unzip /tmp/terraform.zip -d /tmp/ >/dev/null
-mv -f /tmp/terraform /usr/local/bin/terraform
-chown 0755 /usr/local/bin/terraform
-rm /tmp/terraform.zip
-terraform -install-autocomplete
-
-echo "Install Vault"
-latest_release_url="https://github.com/hashicorp/vault/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/hashicorp/vault/releases/tag/v.' | grep -v beta | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-curl ${CURL_OPTS} -L "https://releases.hashicorp.com/vault/${TAG}/vault_${TAG}_linux_amd64.zip" \
-    -o /tmp/vault.zip >/dev/null
-unzip /tmp/vault.zip -d /tmp/ >/dev/null
-mv -f /tmp/vault /usr/local/bin/vault
-chown 0755 /usr/local/bin/vault
-rm /tmp/vault.zip
-vault -autocomplete-install
-
 echo "Install k9s"
-latest_release_url="https://github.com/derailed/k9s/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/derailed/k9s/releases/tag/v' | grep -v beta  | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}')
-curl ${CURL_OPTS} -L "https://github.com/derailed/k9s/releases/download/${TAG}/k9s_Linux_amd64.tar.gz" \
+K9S_VERSION=$(curl -sL https://api.github.com/repos/derailed/k9s/releases/latest | jq -r .tag_name)
+curl -L "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_${OS}_${ARCH}.tar.gz" \
     -o /tmp/k9s.tar.gz >/dev/null
 tar zxf /tmp/k9s.tar.gz -C /tmp/ >/dev/null
 mv -f /tmp/k9s /usr/local/bin/k9s
@@ -111,19 +181,17 @@ chown 0755 /usr/local/bin/k9s
 rm /tmp/k9s.tar.gz
 
 echo "Install popeye"
-latest_release_url="https://github.com/derailed/popeye/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/derailed/popeye/releases/tag/v' | grep -v beta  | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}')
-curl ${CURL_OPTS} -L "https://github.com/derailed/popeye/releases/download/${TAG}/popeye_Linux_x86_64.tar.gz" \
-    -o /tmp/popeye.tar.gz >/dev/null
+POPEYE_VERSION=$(curl -sL https://api.github.com/repos/derailed/popeye/releases/latest | jq -r .tag_name)
+[ "$(uname -m)" = x86_64 ] && curl -L "https://github.com/derailed/popeye/releases/download/${POPEYE_VERSION}/popeye_${OS}_x86_64.tar.gz" -o /tmp/popeye.tar.gz >/dev/null
+[ "$(uname -m)" = aarch64 ] && curl -L "https://github.com/derailed/popeye/releases/download/${POPEYE_VERSION}/popeye_${OS}_arm64.tar.gz" -o /tmp/popeye.tar.gz >/dev/null
 tar zxf /tmp/popeye.tar.gz -C /tmp/ >/dev/null
 mv -f /tmp/popeye /usr/local/bin/popeye
 chown 0755 /usr/local/bin/popeye
 rm /tmp/popeye.tar.gz
 
 echo "Install havener"
-latest_release_url="https://github.com/homeport/havener/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/homeport/havener/releases/tag/v' | grep -v beta  | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-curl ${CURL_OPTS} -L "https://github.com/homeport/havener/releases/download/v${TAG}/havener_${TAG}_linux_amd64.tar.gz" \
+HAVENER_VERSION=$(curl -sL https://api.github.com/repos/homeport/havener/releases/latest | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+curl -L "https://github.com/homeport/havener/releases/download/v${HAVENER_VERSION}/havener_${HAVENER_VERSION}_${OS}_${ARCH}.tar.gz" \
     -o /tmp/havener.tar.gz >/dev/null
 tar zxf /tmp/havener.tar.gz -C /tmp/ >/dev/null
 mv -f /tmp/havener /usr/local/bin/havener
@@ -131,99 +199,37 @@ chown 0755 /usr/local/bin/havener
 rm /tmp/havener.tar.gz
 
 echo "Install kubectx and kubens"
-latest_release_url="https://github.com/ahmetb/kubectx/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/ahmetb/kubectx/releases/tag/v' | grep -v beta  | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-curl ${CURL_OPTS} -L "https://github.com/ahmetb/kubectx/releases/download/v${TAG}/kubectx_v${TAG}_linux_x86_64.tar.gz" \
+KUBECTX_VERSION=$(curl -sL https://api.github.com/repos/ahmetb/kubectx/releases/latest | jq -r .tag_name)
+curl -L "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubectx_${KUBECTX_VERSION}_${OS}_x86_64.tar.gz" \
     -o /tmp/kubectx.tar.gz >/dev/null
 tar zxf /tmp/kubectx.tar.gz -C /tmp/ >/dev/null
 mv -f /tmp/kubectx /usr/local/bin/kubectx
 chown 0755 /usr/local/bin/kubectx
 rm /tmp/kubectx.tar.gz
-curl ${CURL_OPTS} -L "https://github.com/ahmetb/kubectx/releases/download/v${TAG}/kubens_v${TAG}_linux_x86_64.tar.gz" \
+curl -L "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubens_${KUBECTX_VERSION}_${OS}_x86_64.tar.gz" \
     -o /tmp/kubens.tar.gz >/dev/null
 tar zxf /tmp/kubens.tar.gz -C /tmp/ >/dev/null
 mv -f /tmp/kubens /usr/local/bin/kubens
 chown 0755 /usr/local/bin/kubens
 rm /tmp/kubens.tar.gz
 
-# echo "Install dog"
-# latest_release_url="https://github.com/ogham/dog/releases"
-# TAG=$(curl -Ls $latest_release_url | grep 'href="/ogham/dog/releases/tag/v' | grep -v beta  | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-# curl ${CURL_OPTS} -L "https://github.com/ogham/dog/releases/download/v${TAG}/dog-v${TAG}-x86_64-unknown-linux-gnu.zip" \
-#     -o /tmp/dog.zip >/dev/null
-# unzip /tmp/dog.zip -d /tmp/ >/dev/null
-# mv -f /tmp/bin/dog /usr/local/bin/dog
-# chown 0755 /usr/local/bin/dog
-# rm /tmp/dog.zip
-
 echo "Install duf"
-latest_release_url="https://github.com/muesli/duf/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/muesli/duf/releases/tag/v' | grep -v beta  | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-curl ${CURL_OPTS} -L "https://github.com/muesli/duf/releases/download/v${TAG}/duf_${TAG}_linux_amd64.deb" \
+DUF_VERSION=$(curl -sL https://api.github.com/repos/muesli/duf/releases/latest | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+curl -L "https://github.com/muesli/duf/releases/download/v${DUF_VERSION}/duf_${DUF_VERSION}_${OS}_${ARCH}.deb" \
     -o /tmp/duf.deb >/dev/null
 dpkg -i /tmp/duf.deb
 rm /tmp/duf.deb
 
-echo "Install Minio mc client"
-curl ${CURL_OPTS} -L "https://dl.min.io/client/mc/release/linux-amd64/mc" \
-    -o /usr/local/bin/mc >/dev/null
-chmod 0755 /usr/local/bin/mc
-
-echo "Install Restic cli"
-latest_release_url="https://github.com/restic/restic/releases/"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/restic/restic/releases/tag/v.' | grep -v beta | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-wget "https://github.com/restic/restic/releases/download/v${TAG}/restic_${TAG}_linux_amd64.bz2" -O /tmp/restic.bz2 >/dev/null
-bzip2 -d /tmp/restic.bz2
-mv /tmp/restic /usr/local/bin/restic
-chmod 0755 /usr/local/bin/restic
-
-echo "Install Scaleway scw cli"
-export SCW_VERSION=$(curl -sL "https://api.github.com/repos/scaleway/scaleway-cli/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-wget "https://github.com/scaleway/scaleway-cli/releases/download/v${SCW_VERSION}/scaleway-cli_${SCW_VERSION}_linux_amd64" -O /usr/local/bin/scw >/dev/null
-chmod 0755 /usr/local/bin/scw
-
-echo "Install Hadolint"
-export HADOLINT_VERSION=$(curl -sL "https://api.github.com/repos/hadolint/hadolint/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-wget "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64" -O /usr/local/bin/hadolint >/dev/null
-chmod 0755 /usr/local/bin/hadolint
-
 echo "Install bat"
-latest_release_url="https://github.com/sharkdp/bat/releases"
-TAG=$(curl -Ls $latest_release_url | grep 'href="/sharkdp/bat/releases/tag/v.' | grep -v beta | grep -v rc | head -n 1 | cut -d '"' -f 6 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}' | cut -d 'v' -f2)
-curl ${CURL_OPTS} -L "https://github.com/sharkdp/bat/releases/download/v${TAG}/bat_${TAG}_amd64.deb" \
+BAT_VERSION=$(curl -sL https://api.github.com/repos/sharkdp/bat/releases/latest | jq -r .tag_name | sed -E 's/v(.*)/\1/')
+curl -L "https://github.com/sharkdp/bat/releases/download/v${BAT_VERSION}/bat_${BAT_VERSION}_${ARCH}.deb" \
     -o /tmp/bat.deb >/dev/null
 dpkg -i /tmp/bat.deb
 rm /tmp/bat.deb
 
-echo "Install cosign"
-curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64"
-mv cosign-linux-amd64 /usr/local/bin/cosign
-chmod +x /usr/local/bin/cosign
-
-echo "Install dive"
-export DIVE_VERSION=$(curl -sL "https://api.github.com/repos/wagoodman/dive/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-curl -OL https://github.com/wagoodman/dive/releases/download/v${DIVE_VERSION}/dive_${DIVE_VERSION}_linux_amd64.deb
-sudo apt install ./dive_${DIVE_VERSION}_linux_amd64.deb
-
-echo "Install oras"
-export ORAS_VERSION=$(curl https://api.github.com/repos/oras-project/oras/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-curl -LO "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz"
-mkdir -p oras-install/
-tar -zxf oras_${ORAS_VERSION}_*.tar.gz -C oras-install/
-sudo mv oras-install/oras /usr/local/bin/
-rm -rf oras_${ORAS_VERSION}_*.tar.gz oras-install/
-
-echo "Install kind"
-export KIND_VERSION=$(curl https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-# For AMD64 / x86_64
-[ $(uname -m) = x86_64 ] && curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-linux-amd64
-# For ARM64
-[ $(uname -m) = aarch64 ] && curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-linux-arm64
-chmod 0755 /usr/local/bin/kind
-
 echo "Install Postgresql client"
-wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /usr/share/keyrings/postgresql.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee -a /etc/apt/sources.list.d/pgdg.list
+wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /usr/share/keyrings/postgresql.gpg
+echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | tee -a /etc/apt/sources.list.d/pgdg.list
 apt-get update >/dev/null
 apt-get install -y postgresql-client
 
@@ -251,7 +257,7 @@ echo "export PATH=\$HOME/bin:\$HOME/.local/bin:/usr/local/testssl.sh:\${KREW_ROO
 echo "Install NodeJS and NPM"
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
 NODE_MAJOR=20
-echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
+echo "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
 apt-get update
 apt-get install -y nodejs
 
