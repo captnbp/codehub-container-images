@@ -6,6 +6,8 @@ DEBIAN_FRONTEND=noninteractive
 
 echo "Install tools"
 apt-get update >/dev/null
+apt-get dist-upgrade -y
+apt-get install -y --no-install-recommends dumb-init sudo procps lsb-release vim pwgen jq wget curl unzip software-properties-common gpg gettext ca-certificates openssh-client git bzip2 zsh
 wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | tee /usr/share/keyrings/trivy.gpg > /dev/null
 echo "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb buster main" | tee -a /etc/apt/sources.list.d/trivy.list
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg
@@ -16,8 +18,8 @@ echo \
   $(source /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 apt-get update >/dev/null
-apt-get install -y --no-install-recommends dumb-init sudo procps lsb-release vim pwgen jq wget curl unzip software-properties-common gpg gettext ca-certificates openssh-client git bzip2 skopeo pass zsh fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin golang shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2
-apt-get dist-upgrade -y
+apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin golang shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2
+
 
 # For AMD64 / x86_64
 [ "$(uname -m)" = x86_64 ] && ARCH="amd64"
