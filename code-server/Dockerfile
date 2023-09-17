@@ -3,23 +3,10 @@ FROM debian:12
 COPY    ./install_tools.sh /usr/local/bin/install_tools.sh
 COPY    ./docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
+ENV     LANG=en_US.UTF-8
+
 USER    root
 RUN     /usr/local/bin/install_tools.sh
-
-# https://wiki.debian.org/Locale#Manually
-RUN sed -i "s/# en_US.UTF-8/en_US.UTF-8/" /etc/locale.gen \
-  && locale-gen
-ENV LANG=en_US.UTF-8
-
-RUN adduser --gecos '' --disabled-password coder && \
-  echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd
-# hadolint ignore=DL4006
-RUN ARCH="$(dpkg --print-architecture)" && \
-    curl -fsSL "https://github.com/boxboat/fixuid/releases/download/v0.5/fixuid-0.5-linux-$ARCH.tar.gz" | tar -C /usr/local/bin -xzf - && \
-    chown root:root /usr/local/bin/fixuid && \
-    chmod 4755 /usr/local/bin/fixuid && \
-    mkdir -p /etc/fixuid && \
-    printf "user: coder\ngroup: coder\n" > /etc/fixuid/config.yml
 
 RUN curl -L "https://github.com/cdr/code-server/releases/download/v4.16.1/code-server_4.16.1_$(dpkg --print-architecture).deb" -o /tmp/code-server.deb && \
     dpkg -i /tmp/code-server.deb && rm /tmp/code-server.deb
@@ -31,8 +18,8 @@ EXPOSE 8080
 USER    1000
 ENV     USER=coder
 WORKDIR /home/coder
-
 USER    coder
+
 ENV     ZSH_CACHE_DIR=/tmp
 
 ENTRYPOINT      ["dumb-init", "docker-entrypoint.sh"]

@@ -20,6 +20,9 @@ echo \
 apt-get update >/dev/null
 apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin golang shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2 gcc python3-dev
 
+# https://wiki.debian.org/Locale#Manually
+sed -i "s/# en_US.UTF-8/en_US.UTF-8/" /etc/locale.gen 
+locale-gen
 
 # For AMD64 / x86_64
 [ "$(uname -m)" = x86_64 ] && ARCH="amd64"
@@ -234,6 +237,15 @@ wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > 
 echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | tee -a /etc/apt/sources.list.d/pgdg.list
 apt-get update >/dev/null
 apt-get install -y postgresql-client
+
+adduser --gecos '' --disabled-password coder
+echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd
+
+curl -fsSL "https://github.com/boxboat/fixuid/releases/download/v0.5/fixuid-0.5-${OS}-${ARCH}.tar.gz" | tar -C /usr/local/bin -xzf -
+chown root:root /usr/local/bin/fixuid
+chmod 4755 /usr/local/bin/fixuid
+mkdir -p /etc/fixuid
+printf "user: coder\ngroup: coder\n" > /etc/fixuid/config.yml
 
 echo "Set shell to zsh"
 chsh -s /usr/bin/zsh
