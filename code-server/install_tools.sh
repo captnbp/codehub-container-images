@@ -18,7 +18,7 @@ echo \
   $(source /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 apt-get update >/dev/null
-apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin golang shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2
+apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin golang shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2 gcc python3-dev
 
 
 # For AMD64 / x86_64
@@ -234,9 +234,6 @@ wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > 
 echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | tee -a /etc/apt/sources.list.d/pgdg.list
 apt-get update >/dev/null
 apt-get install -y postgresql-client
-
-echo "install testssl.sh"
-git clone --depth 1 https://github.com/drwetter/testssl.sh.git /usr/local/testssl.sh
 
 echo "Set shell to zsh"
 chsh -s /usr/bin/zsh
