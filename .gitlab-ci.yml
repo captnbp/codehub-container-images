@@ -137,18 +137,24 @@ mr-note-oauth:
 
 merge-manifest-code-server:
   extends: .tpl:container:build:merge_manifests
+  variables:
+    IMAGE_NAME: "code-server"
   needs:
     - job: docker-build-code-server
       artifacts: false
 
 merge-manifest-nginx:
   extends: .tpl:container:build:merge_manifests
+  variables:
+    IMAGE_NAME: "nginx"
   needs:
     - job: docker-build-nginx
       artifacts: false
 
 merge-manifest-oauth:
   extends: .tpl:container:build:merge_manifests
+  variables:
+    IMAGE_NAME: "oauth"
   needs:
     - job: docker-build-oauth
       artifacts: false
