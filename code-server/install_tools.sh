@@ -149,7 +149,7 @@ chmod 0755 /usr/local/bin/kind
 
 echo "Install manifest-tool"
 MANIFEST_VERSION=$(curl -sL https://api.github.com/repos/estesp/manifest-tool/releases/latest | jq -r .tag_name | sed -E 's/v(.*)/\1/')
-curl -sLO --fail --show-error /tmp/binaries-manifest-tool.tar.gz "https://github.com/estesp/manifest-tool/releases/download/v${MANIFEST_VERSION}/binaries-manifest-tool-${MANIFEST_VERSION}.tar.gz"
+curl -sL --fail --show-error -o /tmp/binaries-manifest-tool.tar.gz "https://github.com/estesp/manifest-tool/releases/download/v${MANIFEST_VERSION}/binaries-manifest-tool-${MANIFEST_VERSION}.tar.gz"
 tar -zxf /tmp/binaries-manifest-tool.tar.gz "manifest-tool-${OS}-${ARCH}"
 mv "manifest-tool-${OS}-${ARCH}" "/usr/local/bin/manifest-tool"
 chmod 0755 /usr/local/bin/manifest-tool
