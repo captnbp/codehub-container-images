@@ -144,7 +144,7 @@ rm -rf "oras_${ORAS_VERSION}_${OS}_${ARCH}.tar.gz" oras-install/
 
 echo "Install kind"
 KIND_VERSION=$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq -r .tag_name | sed -E 's/v(.*)/\1/')
-curl -sLO --fail --show-error /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-${OS}-${ARCH}"
+curl -sL --fail --show-error -o /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-${OS}-${ARCH}"
 chmod 0755 /usr/local/bin/kind
 
 echo "Install manifest-tool"
