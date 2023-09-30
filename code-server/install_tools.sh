@@ -53,7 +53,6 @@ CHECKSUM_URL="$DOWNLOAD_URL.sha256"
 HELM_TMP_ROOT="$(mktemp -dt helm-installer-XXXXXX)"
 HELM_TMP_FILE="$HELM_TMP_ROOT/$HELM_DIST"
 HELM_SUM_FILE="$HELM_TMP_ROOT/$HELM_DIST.sha256"
-echo "Downloading $DOWNLOAD_URL"
 if type "curl" > /dev/null; then
   curl -SsL "$CHECKSUM_URL" -o "$HELM_SUM_FILE"
 elif type "wget" > /dev/null; then
