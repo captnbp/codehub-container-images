@@ -8,7 +8,7 @@ ENV     LANG=en_US.UTF-8
 USER    root
 RUN     /usr/local/bin/install_tools.sh
 
-RUN curl -L "https://github.com/cdr/code-server/releases/download/v4.17.1/code-server_4.17.1_$(dpkg --print-architecture).deb" -o /tmp/code-server.deb && \
+RUN curl -L "https://github.com/cdr/code-server/releases/download/v4.18.0/code-server_4.18.0_$(dpkg --print-architecture).deb" -o /tmp/code-server.deb && \
     dpkg -i /tmp/code-server.deb && rm /tmp/code-server.deb
 
 EXPOSE 8080
