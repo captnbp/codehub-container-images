@@ -229,6 +229,18 @@ curl -sL --fail --show-error "https://github.com/sharkdp/bat/releases/download/v
 dpkg -i /tmp/bat.deb
 rm /tmp/bat.deb
 
+echo "Install grype"
+GRYPE_VERSION=$(curl -sL "https://api.github.com/repos/anchore/grype/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+curl -sLO --fail --show-error "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_${OS}_${ARCH}.deb"
+apt install "./grype_${GRYPE_VERSION}_${OS}_${ARCH}.deb"
+rm "./grype_${GRYPE_VERSION}_${OS}_${ARCH}.deb"
+
+echo "Install syft"
+SYFT_VERSION=$(curl -sL "https://api.github.com/repos/anchore/syft/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+curl -sLO --fail --show-error "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_${OS}_${ARCH}.deb"
+apt install "./syft_${SYFT_VERSION}_${OS}_${ARCH}.deb"
+rm "./syft_${SYFT_VERSION}_${OS}_${ARCH}.deb"
+
 echo "Install Postgresql client"
 curl -sL --fail --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /usr/share/keyrings/postgresql.gpg
 echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | tee -a /etc/apt/sources.list.d/pgdg.list
