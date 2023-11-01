@@ -242,10 +242,11 @@ apt install "./syft_${SYFT_VERSION}_${OS}_${ARCH}.deb"
 rm "./syft_${SYFT_VERSION}_${OS}_${ARCH}.deb"
 
 echo "Install golang"
-curl -sLO --fail --show-error "https://go.dev/dl/go1.21.3.linux-amd64.tar.gz"
-rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.3.linux-amd64.tar.gz
+GO_VERSION=$(curl -sL https://go.dev/VERSION\?m\=text | head -1)
+curl -sLO --fail --show-error "https://go.dev/dl/${GO_VERSION}.${OS}-${ARCH}.tar.gz"
+rm -rf /usr/local/go && tar -C /usr/local -xzf "${GO_VERSION}.${OS}-${ARCH}.tar.gz"
 echo "export PATH=\$PATH:/usr/local/go/bin" >> /etc/profile
-rm "./go1.21.3.linux-amd64.tar.gz"
+rm "./${GO_VERSION}.${OS}-${ARCH}.tar.gz"
 
 echo "Install Postgresql client"
 curl -sL --fail --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /usr/share/keyrings/postgresql.gpg
