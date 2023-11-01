@@ -18,7 +18,7 @@ echo \
   $(source /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 apt-get update >/dev/null
-apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin golang shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2 gcc python3-dev
+apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2 gcc python3-dev
 
 # https://wiki.debian.org/Locale#Manually
 sed -i "s/# en_US.UTF-8/en_US.UTF-8/" /etc/locale.gen 
@@ -240,6 +240,12 @@ SYFT_VERSION=$(curl -sL "https://api.github.com/repos/anchore/syft/releases/late
 curl -sLO --fail --show-error "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_${OS}_${ARCH}.deb"
 apt install "./syft_${SYFT_VERSION}_${OS}_${ARCH}.deb"
 rm "./syft_${SYFT_VERSION}_${OS}_${ARCH}.deb"
+
+echo "Install golang"
+curl -sLO --fail --show-error "https://go.dev/dl/go1.21.3.linux-amd64.tar.gz"
+rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.3.linux-amd64.tar.gz
+echo "export PATH=\$PATH:/usr/local/go/bin" >> /etc/profile
+rm "./go1.21.3.linux-amd64.tar.gz"
 
 echo "Install Postgresql client"
 curl -sL --fail --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /usr/share/keyrings/postgresql.gpg
