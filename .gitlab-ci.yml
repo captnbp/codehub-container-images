@@ -37,16 +37,19 @@ docker-build-code-server:
   extends: .tpl:container:build:kaniko
   variables:
     IMAGE_NAME: "code-server"
+    IMAGE_PATH: "code-server"
 
 docker-build-nginx:
   extends: .tpl:container:build:kaniko
   variables:
     IMAGE_NAME: "nginx"
+    IMAGE_PATH: "nginx"
 
 docker-build-oauth:
   extends: .tpl:container:build:kaniko
   variables:
     IMAGE_NAME: "oauth"
+    IMAGE_PATH: "oauth"
 
 container_scanning-code-server:
   extends: .tpl:container:test:cve
