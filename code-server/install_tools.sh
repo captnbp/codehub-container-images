@@ -184,8 +184,7 @@ rm /tmp/k9s.tar.gz
 
 echo "Install popeye"
 POPEYE_VERSION=$(curl -sL https://api.github.com/repos/derailed/popeye/releases/latest | jq -r .tag_name)
-[ "$(uname -m)" = x86_64 ] && curl -sL --fail --show-error "https://github.com/derailed/popeye/releases/download/${POPEYE_VERSION}/popeye_${OS}_x86_64.tar.gz" -o /tmp/popeye.tar.gz
-[ "$(uname -m)" = aarch64 ] && curl -sL --fail --show-error "https://github.com/derailed/popeye/releases/download/${POPEYE_VERSION}/popeye_${OS}_arm64.tar.gz" -o /tmp/popeye.tar.gz
+curl -sL --fail --show-error "https://github.com/derailed/popeye/releases/download/${POPEYE_VERSION}/popeye_${OS}_${ARCH}.tar.gz" -o /tmp/popeye.tar.gz
 tar zxf /tmp/popeye.tar.gz -C /tmp/ >/dev/null
 mv -f /tmp/popeye /usr/local/bin/popeye
 chown 0755 /usr/local/bin/popeye
