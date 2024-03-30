@@ -9,7 +9,7 @@ apt-get update >/dev/null
 apt-get dist-upgrade -y
 apt-get install -y --no-install-recommends dumb-init man sudo locales procps lsb-release vim pwgen jq wget curl unzip software-properties-common gpg gettext ca-certificates openssh-client git bzip2 zsh
 curl -sL --fail --show-error https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | tee /usr/share/keyrings/trivy.gpg > /dev/null
-echo "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb buster main" | tee -a /etc/apt/sources.list.d/trivy.list
+echo "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | tee -a /etc/apt/sources.list.d/trivy.list
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg
 chmod a+r /usr/share/keyrings/docker.gpg
 # shellcheck source=/dev/null
