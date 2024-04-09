@@ -12,13 +12,15 @@ curl -sL --fail --show-error https://aquasecurity.github.io/trivy-repo/deb/publi
 echo "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | tee -a /etc/apt/sources.list.d/trivy.list
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg
 chmod a+r /usr/share/keyrings/docker.gpg
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
 # shellcheck source=/dev/null
 echo \
   "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/debian \
   $(source /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 apt-get update >/dev/null
-apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2 gcc python3-dev
+apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netcat-openbsd uuid-runtime dnsutils exa fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin shellcheck python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2 gcc python3-dev mongodb-org-tools mongodb-mongosh
 
 # https://wiki.debian.org/Locale#Manually
 sed -i "s/# en_US.UTF-8/en_US.UTF-8/" /etc/locale.gen 
@@ -282,7 +284,7 @@ echo "export PATH=\$HOME/bin:\$HOME/.local/bin:/usr/local/testssl.sh:\${KREW_ROO
 
 echo "Install NodeJS and NPM"
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-NODE_MAJOR=20
+NODE_MAJOR=21
 echo "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
 apt-get update
 apt-get install -y nodejs
