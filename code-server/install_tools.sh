@@ -82,14 +82,14 @@ cp "$HELM_TMP_BIN" "/usr/local/bin"
 echo "Install Packer"
 PACKER_VERSION=$(curl -sL "https://api.github.com/repos/hashicorp/packer/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
 curl -sL --fail --show-error "https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_${OS}_${ARCH}.zip" -o /tmp/packer.zip
-unzip /tmp/packer.zip >/dev/null
+unzip -o /tmp/packer.zip >/dev/null
 mv -f /tmp/packer /usr/local/bin/packer
 rm /tmp/packer.zip
 
 echo "Install Terraform"
 TERRAFORM_VERSION=$(curl -sL "https://api.github.com/repos/hashicorp/terraform/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
 curl -sL --fail --show-error "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${OS}_${ARCH}.zip" -o /tmp/terraform.zip
-unzip terraform.zip >/dev/null
+unzip -o terraform.zip >/dev/null
 mv -f /tmp/terraform /usr/local/bin/terraform
 chown 0755 /usr/local/bin/terraform
 rm /tmp/terraform.zip
@@ -97,7 +97,7 @@ rm /tmp/terraform.zip
 echo "Install Vault"
 VAULT_VERSION=$(curl -sL "https://api.github.com/repos/hashicorp/vault/releases/latest" | jq -r .tag_name | sed -E 's/v(.*)/\1/')
 curl -sL --fail --show-error "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_${OS}_${ARCH}.zip" -o /tmp/vault.zip
-unzip /tmp/vault.zip >/dev/null
+unzip -o /tmp/vault.zip >/dev/null
 mv -f /tmp/vault /usr/local/bin/vault
 chown 0755 /usr/local/bin/vault
 rm /tmp/vault.zip
