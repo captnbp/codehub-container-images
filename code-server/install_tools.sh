@@ -262,7 +262,7 @@ chsh -s /usr/bin/zsh coder
 
 echo "mkdir -p \$HOME/.oh-my-zsh/cache" >> /etc/zsh/zshrc
 echo "export ZSH_CACHE_DIR=\$HOME/.oh-my-zsh/cache" >> /etc/zsh/zshrc
-echo "plugins=(git kubectl docker ansible helm sudo pass kubectx kube-ps1 terraform fd)" >> /etc/zsh/zshrc
+echo "plugins=(git kubectl docker ansible helm sudo pass kubectx kube-ps1 terraform)" >> /etc/zsh/zshrc
 echo "ZSH_THEME=robbyrussell" >> /etc/zsh/zshrc
 echo "export ZSH=/usr/share/oh-my-zsh" >> /etc/zsh/zshrc
 echo "source \$ZSH/oh-my-zsh.sh" >> /etc/zsh/zshrc
