@@ -168,14 +168,6 @@ mv -f "/tmp/krew-linux_${ARCH}" /usr/local/bin/krew
 chown 0755 /usr/local/bin/krew
 rm /tmp/krew.tar.gz /tmp/LICENSE
 
-echo "Install Gadget"
-GADGET_VERSION=$(curl -sL https://api.github.com/repos/inspektor-gadget/inspektor-gadget/releases/latest | jq -r .tag_name)
-curl -sL --fail --show-error "https://github.com/inspektor-gadget/inspektor-gadget/releases/download/${GADGET_VERSION}/kubectl-gadget-${OS}-${ARCH}-${GADGET_VERSION}.tar.gz" -o /tmp/kubectl-gadget.tar.gz
-tar zxf /tmp/kubectl-gadget.tar.gz -C /tmp/ >/dev/null
-mv -f /tmp/kubectl-gadget /usr/local/bin/kubectl-gadget
-chown 0755 /usr/local/bin/kubectl-gadget
-rm /tmp/kubectl-gadget.tar.gz /tmp/LICENSE
-
 echo "Install k9s"
 K9S_VERSION=$(curl -sL https://api.github.com/repos/derailed/k9s/releases/latest | jq -r .tag_name)
 curl -sL --fail --show-error "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_${OS}_${ARCH}.tar.gz" -o /tmp/k9s.tar.gz
