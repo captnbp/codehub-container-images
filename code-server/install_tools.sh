@@ -160,6 +160,15 @@ echo "install testssl.sh"
 git clone --depth 1 https://github.com/drwetter/testssl.sh.git /usr/local/testssl.sh
 chmod 0755 /usr/local/testssl.sh
 
+echo "Install eza"
+EZA_VERSION=$(curl -sL https://api.github.com/repos/eza-community/eza/releases/latest | jq -r .tag_name)
+[ "$(uname -m)" = x86_64 ] && curl -sL --fail --show-error "https://github.com/eza-community/eza/releases/download/${EZA_VERSION}/eza_x86_64-unknown-linux-gnu.tar.gz" -o /tmp/eza.tar.gz
+[ "$(uname -m)" = aarch64 ] && curl -sL --fail --show-error "https://github.com/eza-community/eza/releases/download/${EZA_VERSION}/eza_aarch64-unknown-linux-gnu.tar.gz" -o /tmp/eza.tar.gz
+tar zxvf "eza.tar.gz" -C /tmp/ >/dev/null
+mv -f "/tmp/eza" /usr/local/bin/eza
+chown 0755 /usr/local/bin/eza
+rm /tmp/eza.tar.gz
+
 echo "Install krew"
 KREW="krew-${OS}_${ARCH}"
 curl -sL --fail --show-error "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" -o /tmp/krew.tar.gz
