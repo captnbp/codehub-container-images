@@ -57,12 +57,16 @@ container_scanning-code-server:
     IMAGE_NAME: "code-server"
   needs:
     - docker-build-code-server
+  dependencies:
+    - docker-build-code-server
 
 container_scanning-nginx:
   extends: .tpl:container:test:cve
   variables:
     IMAGE_NAME: "nginx"
   needs:
+    - docker-build-nginx
+  dependencies:
     - docker-build-nginx
 
 container_scanning-oauth:
@@ -71,6 +75,8 @@ container_scanning-oauth:
     IMAGE_NAME: "oauth"
   needs:
     - docker-build-oauth
+  dependencies:
+   - docker-build-oauth
 
 sign-code-server:
   extends: .tpl:container:sign:sign-image
