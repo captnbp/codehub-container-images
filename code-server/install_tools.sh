@@ -25,7 +25,8 @@ apt-get install -y --no-install-recommends skopeo pass fonts-powerline htop netc
   eza fd-find trivy iproute2 nmap iperf3 docker-ce-cli docker-buildx-plugin docker-compose-plugin shellcheck \
   python3-pip python3-setuptools python3-ldap python3-docker python3-venv twine python3-psycopg2 gcc python3-dev \
   mongodb-org-tools mongodb-mongosh \
-  clamav-base clamav-daemon
+  clamav-base clamav-daemon \
+  ansible
 
 # https://wiki.debian.org/Locale#Manually
 sed -i "s/# en_US.UTF-8/en_US.UTF-8/" /etc/locale.gen 
@@ -36,11 +37,6 @@ locale-gen
 # For ARM64
 [ "$(uname -m)" = aarch64 ] && ARCH="arm64"
 OS=$(uname |tr '[:upper:]' '[:lower:]')
-
-echo "Install Ansible and ansible-modules-hashivault"
-# https://www.linuxuprising.com/2023/03/next-debianubuntu-releases-will-likely.html?m=1
-export PIP_BREAK_SYSTEM_PACKAGES=1
-pip3 install --no-cache-dir ansible ansible-modules-hashivault openshift passlib hvac virtualenv ipykernel checkov
 
 ln -s "$(which fdfind)" /usr/local/bin/fd
 
