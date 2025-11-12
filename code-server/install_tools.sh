@@ -266,7 +266,7 @@ apt-get install -y postgresql-client
 adduser --gecos '' --disabled-password coder
 echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd
 
-curl -sL --fail --show-error "https://github.com/boxboat/fixuid/releases/download/v0.6/fixuid-0.6-${OS}-${ARCH}.tar.gz" | tar -C /usr/local/bin -xzf -
+curl -sL --fail --show-error "https://github.com/boxboat/fixuid/releases/download/v0.5/fixuid-0.5-${OS}-${ARCH}.tar.gz" | tar -C /usr/local/bin -xzf -
 chown root:root /usr/local/bin/fixuid
 chmod 4755 /usr/local/bin/fixuid
 mkdir -p /etc/fixuid
