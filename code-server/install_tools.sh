@@ -103,6 +103,10 @@ mv -f /tmp/vault /usr/local/bin/vault
 chown 0755 /usr/local/bin/vault
 rm /tmp/vault.zip
 
+echo "Install argocd client"
+curl -sL --fail --show-error "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${ARCH}" -o /usr/local/bin/argocd
+chmod 0755 /usr/local/bin/argocd
+
 echo "Install Minio mc client"
 curl -sL --fail --show-error "https://dl.min.io/client/mc/release/${OS}-${ARCH}/mc" -o /usr/local/bin/mc
 chmod 0755 /usr/local/bin/mc
